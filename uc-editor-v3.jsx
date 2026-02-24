@@ -457,19 +457,19 @@ export default function LogoEditor() {
         {/* Lockups */}
         <div style={{ display: "flex", gap: 12, padding: "18px 20px", justifyContent: "center", flexWrap: "wrap" }}>
           {[
-            { id: "hz-light", content: <><Mark color={fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${muted}40` }} /><span style={{ fontWeight: 300, fontSize: 14, letterSpacing: "0.35em", color: fg }}>UPPERCASE</span></>, col: false },
-            { id: "hz-mixed", content: <><Mark color={fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${muted}40` }} /><span style={{ fontSize: 14, color: fg }}><span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span><span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span></span></>, col: false },
-            { id: "stacked", content: <><Mark color={fg} size={38} params={effectiveParams} /><span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: fg }}>UPPERCASE</span></>, col: true },
+            { id: "hz-light", content: <><Mark color={colorVariants[selectedVariant].fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${colorVariants[selectedVariant].fg}40` }} /><span style={{ fontWeight: 300, fontSize: 14, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg }}>UPPERCASE</span></>, col: false },
+            { id: "hz-mixed", content: <><Mark color={colorVariants[selectedVariant].fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${colorVariants[selectedVariant].fg}40` }} /><span style={{ fontSize: 14, color: colorVariants[selectedVariant].fg }}><span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span><span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span></span></>, col: false },
+            { id: "stacked", content: <><Mark color={colorVariants[selectedVariant].fg} size={38} params={effectiveParams} /><span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg }}>UPPERCASE</span></>, col: true },
           ].map(({ id, content, col }, i) => (
             <button
               type="button"
               key={id}
               onClick={() => setSelectedLockup(selectedLockup === i ? null : i)}
               style={{
-                display: "flex", alignItems: "center", gap: 14, background: subtle,
+                display: "flex", alignItems: "center", gap: 14, background: colorVariants[selectedVariant].bg,
                 padding: "12px 22px", borderRadius: 8, border: "none", cursor: "pointer",
                 flexDirection: col ? "column" : "row",
-                boxShadow: selectedLockup === i ? `0 0 0 2px ${fg}` : "none",
+                boxShadow: selectedLockup === i ? `0 0 0 2px ${colorVariants[selectedVariant].fg}` : "none",
                 transition: "box-shadow 0.15s",
               }}
             >

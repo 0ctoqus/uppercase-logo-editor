@@ -281,6 +281,7 @@ export default function LogoEditor() {
   const [autoReturnLength, setAutoReturnLength] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState(1);
   const [selectedLockup, setSelectedLockup] = useState(null); // null = mark only
+  const [lockupSpacing, setLockupSpacing] = useState(28);
   const [animationType, setAnimationType] = useState(null);
   const [animDuration, setAnimDuration] = useState(1.2);
   const [animKey, setAnimKey] = useState(0);
@@ -517,6 +518,12 @@ export default function LogoEditor() {
           </div>
         </Section>
 
+        {selectedLockup !== null && (
+          <Section label="LOCKUP" subtle={subtle} muted={muted}>
+            <Slider label="Spacing" value={lockupSpacing} onChange={setLockupSpacing} min={6} max={60} />
+          </Section>
+        )}
+
         <Section label="ANIMATION" subtle={subtle} muted={muted} defaultOpen={false}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
             {[
@@ -590,7 +597,7 @@ export default function LogoEditor() {
             const isAsm = a === "assemble";
             const s = d * 0.2;
             return (
-              <div key={animKey} style={{ display: "flex", alignItems: "center", gap: 28, ...(!isAsm ? wrap : {}) }}>
+              <div key={animKey} style={{ display: "flex", alignItems: "center", gap: lockupSpacing, ...(!isAsm ? wrap : {}) }}>
                 <div style={isAsm ? { animation: `lk-from-left ${d}s cubic-bezier(.22,1,.36,1) both` } : {}}>
                   <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} />
                 </div>
@@ -608,7 +615,7 @@ export default function LogoEditor() {
             const isAsm = a === "assemble";
             const s = d * 0.2;
             return (
-              <div key={animKey} style={{ display: "flex", alignItems: "center", gap: 28, ...(!isAsm ? wrap : {}) }}>
+              <div key={animKey} style={{ display: "flex", alignItems: "center", gap: lockupSpacing, ...(!isAsm ? wrap : {}) }}>
                 <div style={isAsm ? { animation: `lk-from-left ${d}s cubic-bezier(.22,1,.36,1) both` } : {}}>
                   <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} />
                 </div>
@@ -629,7 +636,7 @@ export default function LogoEditor() {
             const isAsm = a === "assemble";
             const s = d * 0.25;
             return (
-              <div key={animKey} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, ...(!isAsm ? wrap : {}) }}>
+              <div key={animKey} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: lockupSpacing / 2, ...(!isAsm ? wrap : {}) }}>
                 <div style={isAsm ? { animation: `lk-scale ${d}s cubic-bezier(.22,1,.36,1) both`, transformOrigin: "center" } : {}}>
                   <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={140} params={effectiveParams} />
                 </div>

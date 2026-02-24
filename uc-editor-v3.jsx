@@ -237,6 +237,7 @@ export default function LogoEditor() {
   const [darkMode, setDarkMode] = useState(true);
   const [autoReturnLength, setAutoReturnLength] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState(1);
+  const [selectedLockup, setSelectedLockup] = useState(null); // null = mark only
 
   const effectiveParams = autoReturnLength
     ? { ...params, cReturnLength: params.strokeWidth }
@@ -280,6 +281,52 @@ export default function LogoEditor() {
   const applyPreset = (name) => {
     setParams({ ...presets[name], symmetricC: params.symmetricC, linkOuterCorners: params.linkOuterCorners });
     setActivePreset(name);
+  };
+
+  const getExportSVG = () => {
+    const el = document.getElementById("hero-mark");
+    if (!el) return null;
+    if (selectedLockup === null) return new XMLSerializer().serializeToString(el);
+
+    const color = colorVariants[selectedVariant].fg;
+    const inner = el.innerHTML;
+    const [,, mvw, mvh] = el.getAttribute("viewBox").split(" ").map(Number);
+
+    // Measure text width including per-character letter-spacing
+    const measure = (text, size, weight, lsEm) => {
+      const ls = size * lsEm;
+      const c = document.createElement("canvas");
+      const cx = c.getContext("2d");
+      cx.font = `${weight} ${size}px Helvetica Neue,Helvetica,Arial,sans-serif`;
+      return [...text].reduce((w, ch, i) => w + cx.measureText(ch).width + (i < text.length - 1 ? ls : 0), 0) + ls;
+    };
+
+    if (selectedLockup === 0) {
+      // Horizontal: [mark] | UPPERCASE (light)
+      const mh = 30, mw = mvw * (mh / mvh), s = mh / mvh;
+      const tw = measure("UPPERCASE", 14, 300, 0.35), ls = 14 * 0.35, pad = 14;
+      const W = mw + pad + 0.5 + pad + tw, H = 30;
+      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 2)}" height="${H * 2}" xmlns="http://www.w3.org/2000/svg"><g transform="scale(${s})">${inner}</g><rect x="${mw + pad}" y="${(H - 22) / 2}" width="0.5" height="22" fill="${color}" opacity="0.4"/><text x="${mw + pad + 0.5 + pad}" y="${H / 2}" dominant-baseline="central" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="14" font-weight="300" letter-spacing="${ls}" fill="${color}">UPPERCASE</text></svg>`;
+    }
+
+    if (selectedLockup === 1) {
+      // Horizontal: [mark] | UPPER(bold)CASE(light)
+      const mh = 30, mw = mvw * (mh / mvh), s = mh / mvh;
+      const ls = 14 * 0.1, pad = 14;
+      const upperW = measure("UPPER", 14, 700, 0.1), caseW = measure("CASE", 14, 200, 0.1);
+      const W = mw + pad + 0.5 + pad + upperW + caseW, H = 30;
+      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 2)}" height="${H * 2}" xmlns="http://www.w3.org/2000/svg"><g transform="scale(${s})">${inner}</g><rect x="${mw + pad}" y="${(H - 22) / 2}" width="0.5" height="22" fill="${color}" opacity="0.4"/><text x="${mw + pad + 0.5 + pad}" y="${H / 2}" dominant-baseline="central" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="14" letter-spacing="${ls}" fill="${color}"><tspan font-weight="700">UPPER</tspan><tspan font-weight="200">CASE</tspan></text></svg>`;
+    }
+
+    if (selectedLockup === 2) {
+      // Stacked: [mark] above UPPERCASE (small)
+      const mh = 38, mw = mvw * (mh / mvh), s = mh / mvh;
+      const ls = 9 * 0.35, tw = measure("UPPERCASE", 9, 300, 0.35);
+      const W = Math.max(mw, tw), gap = 6, H = mh + gap + 9;
+      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 3)}" height="${Math.round(H * 3)}" xmlns="http://www.w3.org/2000/svg"><g transform="translate(${(W - mw) / 2},0) scale(${s})">${inner}</g><text x="${W / 2}" y="${H}" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" font-weight="300" letter-spacing="${ls}" fill="${color}">UPPERCASE</text></svg>`;
+    }
+
+    return new XMLSerializer().serializeToString(el);
   };
 
   return (
@@ -409,23 +456,26 @@ export default function LogoEditor() {
 
         {/* Lockups */}
         <div style={{ display: "flex", gap: 12, padding: "18px 20px", justifyContent: "center", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, background: subtle, padding: "12px 22px", borderRadius: 8 }}>
-            <Mark color={fg} size={30} params={effectiveParams} />
-            <div style={{ width: 1, height: 22, background: `${muted}40` }} />
-            <span style={{ fontWeight: 300, fontSize: 14, letterSpacing: "0.35em", color: fg }}>UPPERCASE</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, background: subtle, padding: "12px 22px", borderRadius: 8 }}>
-            <Mark color={fg} size={30} params={effectiveParams} />
-            <div style={{ width: 1, height: 22, background: `${muted}40` }} />
-            <span style={{ fontSize: 14, color: fg }}>
-              <span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span>
-              <span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span>
-            </span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: subtle, padding: "12px 22px", borderRadius: 8 }}>
-            <Mark color={fg} size={38} params={effectiveParams} />
-            <span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: fg }}>UPPERCASE</span>
-          </div>
+          {[
+            { id: "hz-light", content: <><Mark color={fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${muted}40` }} /><span style={{ fontWeight: 300, fontSize: 14, letterSpacing: "0.35em", color: fg }}>UPPERCASE</span></>, col: false },
+            { id: "hz-mixed", content: <><Mark color={fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${muted}40` }} /><span style={{ fontSize: 14, color: fg }}><span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span><span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span></span></>, col: false },
+            { id: "stacked", content: <><Mark color={fg} size={38} params={effectiveParams} /><span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: fg }}>UPPERCASE</span></>, col: true },
+          ].map(({ id, content, col }, i) => (
+            <button
+              type="button"
+              key={id}
+              onClick={() => setSelectedLockup(selectedLockup === i ? null : i)}
+              style={{
+                display: "flex", alignItems: "center", gap: 14, background: subtle,
+                padding: "12px 22px", borderRadius: 8, border: "none", cursor: "pointer",
+                flexDirection: col ? "column" : "row",
+                boxShadow: selectedLockup === i ? `0 0 0 2px ${fg}` : "none",
+                transition: "box-shadow 0.15s",
+              }}
+            >
+              {content}
+            </button>
+          ))}
         </div>
 
         {/* Params bar */}
@@ -440,11 +490,9 @@ export default function LogoEditor() {
             >COPY JSON</button>
             <button
               onClick={() => {
-                const el = document.getElementById("hero-mark");
-                if (!el) return;
-                const svg = new XMLSerializer().serializeToString(el);
-                const blob = new Blob([svg], { type: "image/svg+xml" });
-                const url = URL.createObjectURL(blob);
+                const svg = getExportSVG();
+                if (!svg) return;
+                const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = "uc-logo.svg";
@@ -455,14 +503,15 @@ export default function LogoEditor() {
             >DOWNLOAD SVG</button>
             <button
               onClick={() => {
-                const el = document.getElementById("hero-mark");
-                if (!el) return;
+                const svgStr = getExportSVG();
+                if (!svgStr) return;
                 const variant = colorVariants[selectedVariant];
+                const parser = new DOMParser();
+                const svgEl = parser.parseFromString(svgStr, "image/svg+xml").querySelector("svg");
+                const svgW = parseFloat(svgEl.getAttribute("width"));
+                const svgH = parseFloat(svgEl.getAttribute("height"));
                 const sigHeight = 48;
-                const svgW = parseFloat(el.getAttribute("width"));
-                const svgH = parseFloat(el.getAttribute("height"));
                 const sigWidth = Math.round(svgW * (sigHeight / svgH));
-                const svgStr = new XMLSerializer().serializeToString(el);
                 const canvas = document.createElement("canvas");
                 canvas.width = sigWidth;
                 canvas.height = sigHeight;

@@ -1,7 +1,7 @@
 {
   "name": "uppercase-logo-editor",
   "version": "1.0.0",
-"type": "module",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

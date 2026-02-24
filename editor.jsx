@@ -10,8 +10,9 @@ const defaultParams = {
   // U proportions
   uWidth: 98,
   // C proportions
-  cWidth: 95,
+  cWidth: 73,
   ucSpacing: 0,
+  spineThickness: 25,
   cReturnLength: 25,
   cGap: 72, // vertical gap between C returns (opening size)
   // U corners
@@ -49,6 +50,7 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
     cGapBottomRadius: cGBRaw,
     ucSpacing = 0,
     splitSpine = false,
+    spineThickness: sT = t,
   } = params;
 
   const scale = size / th;
@@ -65,13 +67,13 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
   const uInnerBottom = uBottom - t;
 
   // Spine
-  const spineL = uRight - t;
+  const spineL = uRight - sT;
   const spineR = uRight;
-  const spineMid = spineL + t / 2;
+  const spineMid = spineL + sT / 2;
 
   // In split mode: U owns the left half of the spine, C owns the right half
-  const spineWidth = splitSpine ? t / 2 : t;
-  const cArmLeft = (splitSpine ? spineMid : spineR) + ucSpacing;
+  const spineWidth = splitSpine ? sT / 2 : sT;
+  const cArmLeft = spineR + ucSpacing; // always anchored to spineR — no jump on toggle
 
   // C positioning
   const cTop = padY;
@@ -182,7 +184,7 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
   return (
     <svg id={id} viewBox={`0 0 ${cRight} ${th}`} width={cRight * scale} height={th * scale} xmlns="http://www.w3.org/2000/svg">
       <rect x={spineL} y={spineTop} width={spineWidth} height={spineBot - spineTop} fill={color} />
-      {splitSpine && <rect x={cArmLeft} y={spineTop} width={t / 2} height={spineBot - spineTop} fill={color} />}
+      {splitSpine && <rect x={spineMid + ucSpacing} y={spineTop} width={sT / 2} height={spineBot - spineTop} fill={color} />}
       <path d={uPath} fill={color} />
       <path d={cTopPath} fill={color} />
       <path d={cBotPath} fill={color} />
@@ -385,6 +387,7 @@ export default function LogoEditor() {
         <Section label="PROPORTIONS" subtle={subtle} muted={muted}>
           <Slider label="U Width" value={params.uWidth} onChange={(v) => update("uWidth", v)} min={50} max={180} color="#7BA3C9" />
           <Slider label="C Width" value={params.cWidth} onChange={(v) => update("cWidth", v)} min={60} max={200} color="#C9A37B" />
+          <Slider label="Spine Thickness" value={params.spineThickness} onChange={(v) => update("spineThickness", v)} min={1} max={60} />
           <div style={{ marginBottom: 10 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input type="checkbox" checked={params.splitSpine}

@@ -380,7 +380,17 @@ export default function LogoEditor() {
     const el = document.getElementById("hero-mark");
     if (!el) return;
     const uid = `uc-${Date.now()}`;
-    const svgStr = new XMLSerializer().serializeToString(el).replace(/hero-mark/g, uid);
+    let svgStr;
+    if (selectedLockup === null) {
+      svgStr = new XMLSerializer().serializeToString(el);
+    } else {
+      // Lockup SVGs include el.innerHTML which already has <style> + animation classes
+      svgStr = getExportSVG(selectedLockup);
+      if (!svgStr) return;
+      // Add id to outer SVG so the CSS selectors (#hero-mark -> #uid) match
+      svgStr = svgStr.replace("<svg ", `<svg id="hero-mark" `);
+    }
+    svgStr = svgStr.replace(/hero-mark/g, uid);
     const url = URL.createObjectURL(new Blob([svgStr], { type: "image/svg+xml" }));
     const a = document.createElement("a");
     a.href = url;
@@ -558,7 +568,32 @@ export default function LogoEditor() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Hero */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, minHeight: 400, background: colorVariants[selectedVariant].bg, transition: "background 0.2s" }}>
-          <Mark key={animKey} id="hero-mark" color={colorVariants[selectedVariant].fg} size={300} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
+          {selectedLockup === null && (
+            <Mark key={animKey} id="hero-mark" color={colorVariants[selectedVariant].fg} size={300} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
+          )}
+          {selectedLockup === 0 && (
+            <div key={animKey} style={{ display: "flex", alignItems: "center", gap: 28 }}>
+              <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
+              <div style={{ width: 1, height: 70, background: `${colorVariants[selectedVariant].fg}40` }} />
+              <span style={{ fontWeight: 300, fontSize: 36, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>UPPERCASE</span>
+            </div>
+          )}
+          {selectedLockup === 1 && (
+            <div key={animKey} style={{ display: "flex", alignItems: "center", gap: 28 }}>
+              <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
+              <div style={{ width: 1, height: 70, background: `${colorVariants[selectedVariant].fg}40` }} />
+              <span style={{ fontSize: 36, color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
+                <span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span>
+                <span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span>
+              </span>
+            </div>
+          )}
+          {selectedLockup === 2 && (
+            <div key={animKey} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+              <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={140} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
+              <span style={{ fontWeight: 300, fontSize: 20, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>UPPERCASE</span>
+            </div>
+          )}
         </div>
 
         {/* Color strip */}
@@ -581,7 +616,7 @@ export default function LogoEditor() {
             <button
               type="button"
               key={id}
-              onClick={() => downloadSVG(lockup)}
+              onClick={() => setSelectedLockup(lockup)}
               style={{
                 display: "flex", alignItems: "center", gap: 14, background: colorVariants[selectedVariant].bg,
                 padding: "12px 22px", borderRadius: 8, border: "none", cursor: "pointer",
@@ -605,6 +640,10 @@ export default function LogoEditor() {
               onClick={() => { navigator.clipboard.writeText(JSON.stringify(effectiveParams, null, 2)).catch(() => {}); }}
               style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
             >COPY JSON</button>
+            <button
+              onClick={() => downloadSVG(selectedLockup)}
+              style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
+            >DOWNLOAD SVG</button>
             {animationType && (
               <button
                 type="button"

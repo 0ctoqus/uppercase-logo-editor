@@ -222,11 +222,21 @@ const presets = {
   "Tall": { ...defaultParams, uBottomLeft: 50, strokeWidth: 24 },
 };
 
+const colorVariants = [
+  { bg: "#000", fg: "#FFF" },
+  { bg: "#FFF", fg: "#000" },
+  { bg: "#1A1A1A", fg: "#B8986A" },
+  { bg: "#B8986A", fg: "#FFF" },
+  { bg: "#0A1628", fg: "#FFF" },
+  { bg: "#F5F2ED", fg: "#2C2C2C" },
+];
+
 export default function LogoEditor() {
   const [params, setParams] = useState(defaultParams);
   const [activePreset, setActivePreset] = useState("Original");
   const [darkMode, setDarkMode] = useState(true);
   const [autoReturnLength, setAutoReturnLength] = useState(true);
+  const [selectedVariant, setSelectedVariant] = useState(1);
 
   const effectiveParams = autoReturnLength
     ? { ...params, cReturnLength: params.strokeWidth }
@@ -384,23 +394,16 @@ export default function LogoEditor() {
       {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Hero */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, minHeight: 400 }}>
-          <Mark id="hero-mark" color={fg} size={300} params={effectiveParams} />
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, minHeight: 400, background: colorVariants[selectedVariant].bg, transition: "background 0.2s" }}>
+          <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={300} params={effectiveParams} />
         </div>
 
         {/* Color strip */}
         <div style={{ display: "flex", gap: 2, margin: "0 20px", borderRadius: 10, overflow: "hidden" }}>
-          {[
-            { bg: "#000", fg: "#FFF" },
-            { bg: "#FFF", fg: "#000" },
-            { bg: "#1A1A1A", fg: "#B8986A" },
-            { bg: "#B8986A", fg: "#FFF" },
-            { bg: "#0A1628", fg: "#FFF" },
-            { bg: "#F5F2ED", fg: "#2C2C2C" },
-          ].map((ctx, i) => (
-            <div key={i} style={{ flex: 1, background: ctx.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "22px 8px" }}>
+          {colorVariants.map((ctx, i) => (
+            <button type="button" key={ctx.bg} onClick={() => setSelectedVariant(i)} style={{ flex: 1, background: ctx.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "22px 8px", cursor: "pointer", border: "none", boxShadow: selectedVariant === i ? `inset 0 0 0 3px ${ctx.fg}` : "none", transition: "box-shadow 0.15s" }}>
               <Mark color={ctx.fg} size={42} params={effectiveParams} />
-            </div>
+            </button>
           ))}
         </div>
 
@@ -450,6 +453,39 @@ export default function LogoEditor() {
               }}
               style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
             >DOWNLOAD SVG</button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("hero-mark");
+                if (!el) return;
+                const variant = colorVariants[selectedVariant];
+                const sigHeight = 48;
+                const svgW = parseFloat(el.getAttribute("width"));
+                const svgH = parseFloat(el.getAttribute("height"));
+                const sigWidth = Math.round(svgW * (sigHeight / svgH));
+                const svgStr = new XMLSerializer().serializeToString(el);
+                const canvas = document.createElement("canvas");
+                canvas.width = sigWidth;
+                canvas.height = sigHeight;
+                const ctx = canvas.getContext("2d");
+                const url = URL.createObjectURL(new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" }));
+                const img = new Image();
+                img.onload = () => {
+                  ctx.fillStyle = variant.bg;
+                  ctx.fillRect(0, 0, sigWidth, sigHeight);
+                  ctx.drawImage(img, 0, 0, sigWidth, sigHeight);
+                  URL.revokeObjectURL(url);
+                  const pngData = canvas.toDataURL("image/png");
+                  const html = `<!DOCTYPE html>\n<html>\n<body>\n<table cellpadding="0" cellspacing="0" border="0" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">\n  <tr>\n    <td style="padding: 0 0 8px 0; background-color: ${variant.bg};">\n      <img src="${pngData}" width="${sigWidth}" height="${sigHeight}" alt="UC" style="display: block;" />\n    </td>\n  </tr>\n</table>\n</body>\n</html>`;
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+                  a.download = "gmail-signature.html";
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                };
+                img.src = url;
+              }}
+              style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
+            >GMAIL SIG</button>
             <button
               onClick={() => { setParams(defaultParams); setActivePreset("Original"); setAutoReturnLength(true); }}
               style={{ background: "#B8986A", border: "none", color: "#000", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}

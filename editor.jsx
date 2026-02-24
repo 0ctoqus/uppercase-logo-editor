@@ -248,7 +248,7 @@ const colorVariants = [
 export default function LogoEditor() {
   const [params, setParams] = useState(defaultParams);
   const [activePreset, setActivePreset] = useState("Original");
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const [autoReturnLength, setAutoReturnLength] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState(1);
   const [selectedLockup, setSelectedLockup] = useState(null); // null = mark only

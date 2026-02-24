@@ -2,29 +2,29 @@ import { useState, useCallback } from "react";
 
 const defaultParams = {
   // Global
-  strokeWidth: 25,
+  strokeWidth: 26,
   totalWidth: 240,
   totalHeight: 200,
   // Shared
   letterHeight: 188,
   // U proportions
-  uWidth: 98,
+  uWidth: 97,
   // C proportions
-  cWidth: 73,
-  ucSpacing: 0,
-  spineThickness: 25,
-  cReturnLength: 25,
-  cGap: 72, // vertical gap between C returns (opening size)
+  cWidth: 72,
+  ucSpacing: 14,
+  spineThickness: 26,
+  cReturnLength: 26,
+  cGap: 73, // vertical gap between C returns (opening size)
   // U corners
   uBottomLeft: 50,
-  uTopLeft: 13,
+  uTopLeft: 2,
   // C corners
-  cTopRightOuter: 13,
-  cTopRightInner: 0,
-  cBottomRightOuter: 13,
-  cBottomRightInner: 0,
-  cGapTopRadius: 5,
-  cGapBottomRadius: 5,
+  cTopRightOuter: 2,
+  cTopRightInner: 2,
+  cBottomRightOuter: 2,
+  cBottomRightInner: 2,
+  cGapTopRadius: 2,
+  cGapBottomRadius: 2,
   symmetricC: true,
   linkOuterCorners: true,
   splitSpine: false,

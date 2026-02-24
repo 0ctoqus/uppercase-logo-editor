@@ -283,10 +283,10 @@ export default function LogoEditor() {
     setActivePreset(name);
   };
 
-  const getExportSVG = () => {
+  const getExportSVG = (lockup = selectedLockup) => {
     const el = document.getElementById("hero-mark");
     if (!el) return null;
-    if (selectedLockup === null) return new XMLSerializer().serializeToString(el);
+    if (lockup === null) return new XMLSerializer().serializeToString(el);
 
     const color = colorVariants[selectedVariant].fg;
     const inner = el.innerHTML;
@@ -301,7 +301,7 @@ export default function LogoEditor() {
       return [...text].reduce((w, ch, i) => w + cx.measureText(ch).width + (i < text.length - 1 ? ls : 0), 0) + ls;
     };
 
-    if (selectedLockup === 0) {
+    if (lockup === 0) {
       // Horizontal: [mark] | UPPERCASE (light)
       const mh = 30, mw = mvw * (mh / mvh), s = mh / mvh;
       const tw = measure("UPPERCASE", 14, 300, 0.35), ls = 14 * 0.35, pad = 14;
@@ -309,7 +309,7 @@ export default function LogoEditor() {
       return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 2)}" height="${H * 2}" xmlns="http://www.w3.org/2000/svg"><g transform="scale(${s})">${inner}</g><rect x="${mw + pad}" y="${(H - 22) / 2}" width="0.5" height="22" fill="${color}" opacity="0.4"/><text x="${mw + pad + 0.5 + pad}" y="${H / 2}" dominant-baseline="central" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="14" font-weight="300" letter-spacing="${ls}" fill="${color}">UPPERCASE</text></svg>`;
     }
 
-    if (selectedLockup === 1) {
+    if (lockup === 1) {
       // Horizontal: [mark] | UPPER(bold)CASE(light)
       const mh = 30, mw = mvw * (mh / mvh), s = mh / mvh;
       const ls = 14 * 0.1, pad = 14;
@@ -318,7 +318,7 @@ export default function LogoEditor() {
       return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 2)}" height="${H * 2}" xmlns="http://www.w3.org/2000/svg"><g transform="scale(${s})">${inner}</g><rect x="${mw + pad}" y="${(H - 22) / 2}" width="0.5" height="22" fill="${color}" opacity="0.4"/><text x="${mw + pad + 0.5 + pad}" y="${H / 2}" dominant-baseline="central" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="14" letter-spacing="${ls}" fill="${color}"><tspan font-weight="700">UPPER</tspan><tspan font-weight="200">CASE</tspan></text></svg>`;
     }
 
-    if (selectedLockup === 2) {
+    if (lockup === 2) {
       // Stacked: [mark] above UPPERCASE (small)
       const mh = 38, mw = mvw * (mh / mvh), s = mh / mvh;
       const ls = 9 * 0.35, tw = measure("UPPERCASE", 9, 300, 0.35);
@@ -327,6 +327,18 @@ export default function LogoEditor() {
     }
 
     return new XMLSerializer().serializeToString(el);
+  };
+
+  const downloadSVG = (lockup) => {
+    setSelectedLockup(lockup);
+    const svg = getExportSVG(lockup);
+    if (!svg) return;
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "uc-logo.svg";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -457,19 +469,20 @@ export default function LogoEditor() {
         {/* Lockups */}
         <div style={{ display: "flex", gap: 12, padding: "18px 20px", justifyContent: "center", flexWrap: "wrap" }}>
           {[
-            { id: "hz-light", content: <><Mark color={colorVariants[selectedVariant].fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${colorVariants[selectedVariant].fg}40` }} /><span style={{ fontWeight: 300, fontSize: 14, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg }}>UPPERCASE</span></>, col: false },
-            { id: "hz-mixed", content: <><Mark color={colorVariants[selectedVariant].fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${colorVariants[selectedVariant].fg}40` }} /><span style={{ fontSize: 14, color: colorVariants[selectedVariant].fg }}><span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span><span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span></span></>, col: false },
-            { id: "stacked", content: <><Mark color={colorVariants[selectedVariant].fg} size={38} params={effectiveParams} /><span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg }}>UPPERCASE</span></>, col: true },
-          ].map(({ id, content, col }, i) => (
+            { id: "hz-light", lockup: 0, col: false, content: <><Mark color={colorVariants[selectedVariant].fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${colorVariants[selectedVariant].fg}40` }} /><span style={{ fontWeight: 300, fontSize: 14, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg }}>UPPERCASE</span></> },
+            { id: "hz-mixed", lockup: 1, col: false, content: <><Mark color={colorVariants[selectedVariant].fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${colorVariants[selectedVariant].fg}40` }} /><span style={{ fontSize: 14, color: colorVariants[selectedVariant].fg }}><span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span><span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span></span></> },
+            { id: "stacked", lockup: 2, col: true, content: <><Mark color={colorVariants[selectedVariant].fg} size={38} params={effectiveParams} /><span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg }}>UPPERCASE</span></> },
+            { id: "mark-only", lockup: null, col: true, content: <><Mark color={colorVariants[selectedVariant].fg} size={38} params={effectiveParams} /><span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: `${colorVariants[selectedVariant].fg}80` }}>MARK ONLY</span></> },
+          ].map(({ id, lockup, content, col }) => (
             <button
               type="button"
               key={id}
-              onClick={() => setSelectedLockup(selectedLockup === i ? null : i)}
+              onClick={() => downloadSVG(lockup)}
               style={{
                 display: "flex", alignItems: "center", gap: 14, background: colorVariants[selectedVariant].bg,
                 padding: "12px 22px", borderRadius: 8, border: "none", cursor: "pointer",
                 flexDirection: col ? "column" : "row",
-                boxShadow: selectedLockup === i ? `0 0 0 2px ${colorVariants[selectedVariant].fg}` : "none",
+                boxShadow: selectedLockup === lockup ? `0 0 0 2px ${colorVariants[selectedVariant].fg}` : "none",
                 transition: "box-shadow 0.15s",
               }}
             >
@@ -488,19 +501,6 @@ export default function LogoEditor() {
               onClick={() => { navigator.clipboard.writeText(JSON.stringify(effectiveParams, null, 2)).catch(() => {}); }}
               style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
             >COPY JSON</button>
-            <button
-              onClick={() => {
-                const svg = getExportSVG();
-                if (!svg) return;
-                const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "uc-logo.svg";
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
-            >DOWNLOAD SVG</button>
             <button
               onClick={() => {
                 const svgStr = getExportSVG();

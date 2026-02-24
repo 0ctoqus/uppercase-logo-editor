@@ -285,6 +285,7 @@ export default function LogoEditor() {
   const [animationType, setAnimationType] = useState(null);
   const [animDuration, setAnimDuration] = useState(1.2);
   const [animKey, setAnimKey] = useState(0);
+  const [detailedAssemble, setDetailedAssemble] = useState(true);
 
   const effectiveParams = autoReturnLength
     ? { ...params, cReturnLength: params.strokeWidth }
@@ -546,6 +547,17 @@ export default function LogoEditor() {
           {animationType && (
             <>
               <Slider label="Duration (s)" value={animDuration} onChange={setAnimDuration} min={0.3} max={3} step={0.1} />
+              {animationType === "assemble" && selectedLockup !== null && (
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input type="checkbox" checked={detailedAssemble}
+                      onChange={(e) => { setDetailedAssemble(e.target.checked); setAnimKey(k => k + 1); }}
+                      style={{ accentColor: "#B8986A" }}
+                    />
+                    <span style={{ fontSize: 9, color: "#777", letterSpacing: "0.1em" }}>DETAILED MARK ASSEMBLY</span>
+                  </label>
+                </div>
+              )}
               <button type="button" onClick={() => setAnimKey(k => k + 1)}
                 style={{
                   marginTop: 4, padding: "5px 14px", fontSize: 9, letterSpacing: "0.1em",
@@ -595,11 +607,13 @@ export default function LogoEditor() {
               : a === "wipe" ? { animation: `lk-wipe ${d}s cubic-bezier(.65,0,.35,1) both` }
               : {};
             const isAsm = a === "assemble";
+            const detailed = isAsm && detailedAssemble;
             const s = d * 0.2;
             return (
               <div key={animKey} style={{ display: "flex", alignItems: "center", gap: lockupSpacing, ...(!isAsm ? wrap : {}) }}>
-                <div style={isAsm ? { animation: `lk-from-left ${d}s cubic-bezier(.22,1,.36,1) both` } : {}}>
-                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} />
+                <div style={isAsm && !detailed ? { animation: `lk-from-left ${d}s cubic-bezier(.22,1,.36,1) both` } : {}}>
+                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams}
+                    {...(detailed ? { animationType: "assemble", animDuration: d } : {})} />
                 </div>
                 <div style={{ width: 1, height: 70, background: `${colorVariants[selectedVariant].fg}40`, ...(isAsm ? { animation: `lk-fade ${d * 0.5}s ease-out ${s}s both` } : {}) }} />
                 <span style={{ fontWeight: 300, fontSize: 36, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", ...(isAsm ? { animation: `lk-from-right ${d}s cubic-bezier(.22,1,.36,1) ${s * 2}s both` } : {}) }}>UPPERCASE</span>
@@ -613,11 +627,13 @@ export default function LogoEditor() {
               : a === "wipe" ? { animation: `lk-wipe ${d}s cubic-bezier(.65,0,.35,1) both` }
               : {};
             const isAsm = a === "assemble";
+            const detailed = isAsm && detailedAssemble;
             const s = d * 0.2;
             return (
               <div key={animKey} style={{ display: "flex", alignItems: "center", gap: lockupSpacing, ...(!isAsm ? wrap : {}) }}>
-                <div style={isAsm ? { animation: `lk-from-left ${d}s cubic-bezier(.22,1,.36,1) both` } : {}}>
-                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} />
+                <div style={isAsm && !detailed ? { animation: `lk-from-left ${d}s cubic-bezier(.22,1,.36,1) both` } : {}}>
+                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams}
+                    {...(detailed ? { animationType: "assemble", animDuration: d } : {})} />
                 </div>
                 <div style={{ width: 1, height: 70, background: `${colorVariants[selectedVariant].fg}40`, ...(isAsm ? { animation: `lk-fade ${d * 0.5}s ease-out ${s}s both` } : {}) }} />
                 <span style={{ fontSize: 36, color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", ...(isAsm ? { animation: `lk-from-right ${d}s cubic-bezier(.22,1,.36,1) ${s * 2}s both` } : {}) }}>
@@ -634,11 +650,13 @@ export default function LogoEditor() {
               : a === "wipe" ? { animation: `lk-wipe ${d}s cubic-bezier(.65,0,.35,1) both` }
               : {};
             const isAsm = a === "assemble";
+            const detailed = isAsm && detailedAssemble;
             const s = d * 0.25;
             return (
               <div key={animKey} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: lockupSpacing / 2, ...(!isAsm ? wrap : {}) }}>
-                <div style={isAsm ? { animation: `lk-scale ${d}s cubic-bezier(.22,1,.36,1) both`, transformOrigin: "center" } : {}}>
-                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={140} params={effectiveParams} />
+                <div style={isAsm && !detailed ? { animation: `lk-scale ${d}s cubic-bezier(.22,1,.36,1) both`, transformOrigin: "center" } : {}}>
+                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={140} params={effectiveParams}
+                    {...(detailed ? { animationType: "assemble", animDuration: d } : {})} />
                 </div>
                 <span style={{ fontWeight: 300, fontSize: 20, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", ...(isAsm ? { animation: `lk-from-below ${d}s cubic-bezier(.22,1,.36,1) ${s}s both` } : {}) }}>UPPERCASE</span>
               </div>

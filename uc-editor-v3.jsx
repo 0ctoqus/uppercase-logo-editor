@@ -226,6 +226,11 @@ export default function LogoEditor() {
   const [params, setParams] = useState(defaultParams);
   const [activePreset, setActivePreset] = useState("Original");
   const [darkMode, setDarkMode] = useState(true);
+  const [autoReturnLength, setAutoReturnLength] = useState(true);
+
+  const effectiveParams = autoReturnLength
+    ? { ...params, cReturnLength: params.strokeWidth }
+    : params;
 
   const bg = darkMode ? "#080808" : "#F5F2ED";
   const fg = darkMode ? "#FFFFFF" : "#080808";
@@ -323,7 +328,18 @@ export default function LogoEditor() {
 
         <Section label="C — OPENING" subtle={subtle} muted={muted}>
           <Slider label="C Opening (gap)" value={params.cGap} onChange={(v) => update("cGap", v)} min={20} max={160} color="#C9A37B" />
-          <Slider label="C Return Length" value={params.cReturnLength} onChange={(v) => update("cReturnLength", v)} min={0} max={70} color="#C9A37B" />
+          <div style={{ marginBottom: 6 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={autoReturnLength}
+                onChange={(e) => setAutoReturnLength(e.target.checked)}
+                style={{ accentColor: "#C9A37B" }}
+              />
+              <span style={{ fontSize: 9, color: "#777", letterSpacing: "0.1em" }}>AUTO RETURN (= STROKE WIDTH)</span>
+            </label>
+          </div>
+          <div style={{ opacity: autoReturnLength ? 0.3 : 1, pointerEvents: autoReturnLength ? "none" : "auto" }}>
+            <Slider label={`C Return Length${autoReturnLength ? " (auto)" : ""}`} value={effectiveParams.cReturnLength} onChange={(v) => update("cReturnLength", v)} min={0} max={70} color="#C9A37B" />
+          </div>
           <div style={{ fontSize: 8, color: muted, letterSpacing: "0.12em", marginBottom: 6, marginTop: 12 }}>GAP CORNER RADII</div>
           <Slider label="Top Gap Radius" value={params.cGapTopRadius} onChange={(v) => update("cGapTopRadius", v)} max={20} color="#C9A37B" />
           <div style={{ opacity: params.symmetricC ? 0.3 : 1, pointerEvents: params.symmetricC ? "none" : "auto" }}>
@@ -357,7 +373,7 @@ export default function LogoEditor() {
           <div style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
             {[48, 32, 20, 14].map((s) => (
               <div key={s} style={{ textAlign: "center" }}>
-                <Mark color={fg} size={s} params={params} />
+                <Mark color={fg} size={s} params={effectiveParams} />
                 <div style={{ fontSize: 7, color: muted, marginTop: 5 }}>{s}</div>
               </div>
             ))}
@@ -369,7 +385,7 @@ export default function LogoEditor() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Hero */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, minHeight: 400 }}>
-          <Mark color={fg} size={300} params={params} />
+          <Mark color={fg} size={300} params={effectiveParams} />
         </div>
 
         {/* Color strip */}
@@ -383,7 +399,7 @@ export default function LogoEditor() {
             { bg: "#F5F2ED", fg: "#2C2C2C" },
           ].map((ctx, i) => (
             <div key={i} style={{ flex: 1, background: ctx.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "22px 8px" }}>
-              <Mark color={ctx.fg} size={42} params={params} />
+              <Mark color={ctx.fg} size={42} params={effectiveParams} />
             </div>
           ))}
         </div>
@@ -391,12 +407,12 @@ export default function LogoEditor() {
         {/* Lockups */}
         <div style={{ display: "flex", gap: 12, padding: "18px 20px", justifyContent: "center", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14, background: subtle, padding: "12px 22px", borderRadius: 8 }}>
-            <Mark color={fg} size={30} params={params} />
+            <Mark color={fg} size={30} params={effectiveParams} />
             <div style={{ width: 1, height: 22, background: `${muted}40` }} />
             <span style={{ fontWeight: 300, fontSize: 14, letterSpacing: "0.35em", color: fg }}>UPPERCASE</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 14, background: subtle, padding: "12px 22px", borderRadius: 8 }}>
-            <Mark color={fg} size={30} params={params} />
+            <Mark color={fg} size={30} params={effectiveParams} />
             <div style={{ width: 1, height: 22, background: `${muted}40` }} />
             <span style={{ fontSize: 14, color: fg }}>
               <span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span>
@@ -404,7 +420,7 @@ export default function LogoEditor() {
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: subtle, padding: "12px 22px", borderRadius: 8 }}>
-            <Mark color={fg} size={38} params={params} />
+            <Mark color={fg} size={38} params={effectiveParams} />
             <span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: fg }}>UPPERCASE</span>
           </div>
         </div>
@@ -412,15 +428,15 @@ export default function LogoEditor() {
         {/* Params bar */}
         <div style={{ padding: "10px 20px 14px", borderTop: `1px solid ${subtle}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <span style={{ fontSize: 8, color: muted, fontFamily: "monospace", letterSpacing: "0.05em" }}>
-            t:{params.strokeWidth} uW:{params.uWidth} cW:{params.cWidth} gap:{params.cGap} ret:{params.cReturnLength} uBL:{params.uBottomLeft} uTL:{params.uTopLeft} cTRo:{params.cTopRightOuter} cTRi:{params.cTopRightInner}
+            t:{params.strokeWidth} uW:{params.uWidth} cW:{params.cWidth} gap:{params.cGap} ret:{effectiveParams.cReturnLength}{autoReturnLength ? "(auto)" : ""} uBL:{params.uBottomLeft} uTL:{params.uTopLeft} cTRo:{params.cTopRightOuter} cTRi:{params.cTopRightInner}
           </span>
           <div style={{ display: "flex", gap: 6 }}>
             <button
-              onClick={() => { navigator.clipboard.writeText(JSON.stringify(params, null, 2)).catch(() => {}); }}
+              onClick={() => { navigator.clipboard.writeText(JSON.stringify(effectiveParams, null, 2)).catch(() => {}); }}
               style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
             >COPY JSON</button>
             <button
-              onClick={() => { setParams(defaultParams); setActivePreset("Original"); }}
+              onClick={() => { setParams(defaultParams); setActivePreset("Original"); setAutoReturnLength(true); }}
               style={{ background: "#B8986A", border: "none", color: "#000", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
             >RESET</button>
           </div>

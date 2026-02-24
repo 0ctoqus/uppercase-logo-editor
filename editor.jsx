@@ -30,7 +30,26 @@ const defaultParams = {
   splitSpine: false,
 };
 
-const Mark = ({ color = "#fff", size = 200, params, id }) => {
+function getAnimationCSS(type, duration, id) {
+  const p = `#${id}`;
+  const d = duration;
+  if (type === "fade") {
+    return `@keyframes uc-fade-${id}{from{opacity:0}to{opacity:1}}${p} .uc-anim{animation:uc-fade-${id} ${d}s ease-out both}`;
+  }
+  if (type === "assemble") {
+    const s = d * 0.15;
+    return `@keyframes uc-fl-${id}{from{transform:translateX(-40px);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes uc-fr-${id}{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes uc-sg-${id}{from{transform:scaleY(0);opacity:0}to{transform:scaleY(1);opacity:1}}${p} .uc-u{animation:uc-fl-${id} ${d}s cubic-bezier(.22,1,.36,1) both}${p} .uc-spine{transform-origin:center center;animation:uc-sg-${id} ${d}s cubic-bezier(.22,1,.36,1) ${s}s both}${p} .uc-ctop{animation:uc-fr-${id} ${d}s cubic-bezier(.22,1,.36,1) ${s * 2}s both}${p} .uc-cbot{animation:uc-fr-${id} ${d}s cubic-bezier(.22,1,.36,1) ${s * 3}s both}`;
+  }
+  if (type === "scale") {
+    return `@keyframes uc-sc-${id}{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}${p} .uc-anim{transform-origin:50% 50%;animation:uc-sc-${id} ${d}s cubic-bezier(.34,1.56,.64,1) both}`;
+  }
+  if (type === "wipe") {
+    return `@keyframes uc-wp-${id}{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}${p} .uc-anim{animation:uc-wp-${id} ${d}s cubic-bezier(.65,0,.35,1) both}`;
+  }
+  return "";
+}
+
+const Mark = ({ color = "#fff", size = 200, params, id, animationType: animType = null, animDuration: animDur = 1.2 }) => {
   const {
     strokeWidth: t,
     totalWidth: tw,
@@ -181,13 +200,23 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
   const spineTop = Math.min(uTop, cTop);
   const spineBot = Math.max(uBottom, cBottom);
 
+  const useGroup = animType && animType !== "assemble";
+  const ac = animType === "assemble";
+
+  const elements = (
+    <>
+      <rect className={ac ? "uc-spine" : undefined} x={spineL} y={spineTop} width={spineWidth} height={spineBot - spineTop} fill={color} />
+      {splitSpine && <rect className={ac ? "uc-spine" : undefined} x={spineMid + ucSpacing} y={spineTop} width={sT / 2} height={spineBot - spineTop} fill={color} />}
+      <path className={ac ? "uc-u" : undefined} d={uPath} fill={color} />
+      <path className={ac ? "uc-ctop" : undefined} d={cTopPath} fill={color} />
+      <path className={ac ? "uc-cbot" : undefined} d={cBotPath} fill={color} />
+    </>
+  );
+
   return (
     <svg id={id} viewBox={`0 0 ${cRight} ${th}`} width={cRight * scale} height={th * scale} xmlns="http://www.w3.org/2000/svg">
-      <rect x={spineL} y={spineTop} width={spineWidth} height={spineBot - spineTop} fill={color} />
-      {splitSpine && <rect x={spineMid + ucSpacing} y={spineTop} width={sT / 2} height={spineBot - spineTop} fill={color} />}
-      <path d={uPath} fill={color} />
-      <path d={cTopPath} fill={color} />
-      <path d={cBotPath} fill={color} />
+      {animType && id && <style>{getAnimationCSS(animType, animDur, id)}</style>}
+      {useGroup ? <g className="uc-anim">{elements}</g> : elements}
     </svg>
   );
 };
@@ -252,6 +281,9 @@ export default function LogoEditor() {
   const [autoReturnLength, setAutoReturnLength] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState(1);
   const [selectedLockup, setSelectedLockup] = useState(null); // null = mark only
+  const [animationType, setAnimationType] = useState(null);
+  const [animDuration, setAnimDuration] = useState(1.2);
+  const [animKey, setAnimKey] = useState(0);
 
   const effectiveParams = autoReturnLength
     ? { ...params, cReturnLength: params.strokeWidth }
@@ -341,6 +373,20 @@ export default function LogoEditor() {
     }
 
     return new XMLSerializer().serializeToString(el);
+  };
+
+  const downloadAnimatedSVG = () => {
+    if (!animationType) return;
+    const el = document.getElementById("hero-mark");
+    if (!el) return;
+    const uid = `uc-${Date.now()}`;
+    const svgStr = new XMLSerializer().serializeToString(el).replace(/hero-mark/g, uid);
+    const url = URL.createObjectURL(new Blob([svgStr], { type: "image/svg+xml" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "uc-logo-animated.svg";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const downloadSVG = (lockup) => {
@@ -461,6 +507,39 @@ export default function LogoEditor() {
           </div>
         </Section>
 
+        <Section label="ANIMATION" subtle={subtle} muted={muted} defaultOpen={false}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
+            {[
+              { value: null, label: "None" },
+              { value: "fade", label: "Fade In" },
+              { value: "assemble", label: "Assemble" },
+              { value: "scale", label: "Scale Up" },
+              { value: "wipe", label: "Wipe" },
+            ].map(({ value, label }) => (
+              <button type="button" key={label} onClick={() => { setAnimationType(value); setAnimKey(k => k + 1); }}
+                style={{
+                  padding: "5px 10px", fontSize: 9, letterSpacing: "0.08em",
+                  background: animationType === value ? "#B8986A" : "#1A1A1A",
+                  color: animationType === value ? "#000" : "#666",
+                  border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit",
+                }}
+              >{label}</button>
+            ))}
+          </div>
+          {animationType && (
+            <>
+              <Slider label="Duration (s)" value={animDuration} onChange={setAnimDuration} min={0.3} max={3} step={0.1} />
+              <button type="button" onClick={() => setAnimKey(k => k + 1)}
+                style={{
+                  marginTop: 4, padding: "5px 14px", fontSize: 9, letterSpacing: "0.1em",
+                  background: "none", border: `1px solid ${muted}`, borderRadius: 4,
+                  color: muted, cursor: "pointer", fontFamily: "inherit", width: "100%",
+                }}
+              >REPLAY</button>
+            </>
+          )}
+        </Section>
+
         {/* Mini preview */}
         <div style={{ marginTop: 12 }}>
           <div style={{ fontSize: 9, letterSpacing: "0.3em", color: muted, marginBottom: 10 }}>SCALE</div>
@@ -479,7 +558,7 @@ export default function LogoEditor() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Hero */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, minHeight: 400, background: colorVariants[selectedVariant].bg, transition: "background 0.2s" }}>
-          <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={300} params={effectiveParams} />
+          <Mark key={animKey} id="hero-mark" color={colorVariants[selectedVariant].fg} size={300} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
         </div>
 
         {/* Color strip */}
@@ -526,6 +605,13 @@ export default function LogoEditor() {
               onClick={() => { navigator.clipboard.writeText(JSON.stringify(effectiveParams, null, 2)).catch(() => {}); }}
               style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
             >COPY JSON</button>
+            {animationType && (
+              <button
+                type="button"
+                onClick={downloadAnimatedSVG}
+                style={{ background: "#B8986A", border: "none", color: "#000", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
+              >ANIMATED SVG</button>
+            )}
             <button
               onClick={() => {
                 const svgStr = getExportSVG();

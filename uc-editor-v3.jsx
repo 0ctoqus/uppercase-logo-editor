@@ -27,7 +27,7 @@ const defaultParams = {
   linkOuterCorners: true,
 };
 
-const Mark = ({ color = "#fff", size = 200, params }) => {
+const Mark = ({ color = "#fff", size = 200, params, id }) => {
   const {
     strokeWidth: t,
     totalWidth: tw,
@@ -169,7 +169,7 @@ const Mark = ({ color = "#fff", size = 200, params }) => {
   const spineBot = Math.max(uBottom, cBottom);
 
   return (
-    <svg viewBox={`0 0 ${cRight} ${th}`} width={cRight * scale} height={th * scale} xmlns="http://www.w3.org/2000/svg">
+    <svg id={id} viewBox={`0 0 ${cRight} ${th}`} width={cRight * scale} height={th * scale} xmlns="http://www.w3.org/2000/svg">
       <rect x={spineL} y={spineTop} width={t} height={spineBot - spineTop} fill={color} />
       <path d={uPath} fill={color} />
       <path d={cTopPath} fill={color} />
@@ -385,7 +385,7 @@ export default function LogoEditor() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Hero */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, minHeight: 400 }}>
-          <Mark color={fg} size={300} params={effectiveParams} />
+          <Mark id="hero-mark" color={fg} size={300} params={effectiveParams} />
         </div>
 
         {/* Color strip */}
@@ -435,6 +435,21 @@ export default function LogoEditor() {
               onClick={() => { navigator.clipboard.writeText(JSON.stringify(effectiveParams, null, 2)).catch(() => {}); }}
               style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
             >COPY JSON</button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("hero-mark");
+                if (!el) return;
+                const svg = new XMLSerializer().serializeToString(el);
+                const blob = new Blob([svg], { type: "image/svg+xml" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "uc-logo.svg";
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
+            >DOWNLOAD SVG</button>
             <button
               onClick={() => { setParams(defaultParams); setActivePreset("Original"); setAutoReturnLength(true); }}
               style={{ background: "#B8986A", border: "none", color: "#000", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}

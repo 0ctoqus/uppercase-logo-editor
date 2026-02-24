@@ -567,33 +567,76 @@ export default function LogoEditor() {
       {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Hero */}
+        {selectedLockup !== null && animationType && (
+          <style>{`
+            @keyframes lk-fade{from{opacity:0}to{opacity:1}}
+            @keyframes lk-from-left{from{transform:translateX(-30px);opacity:0}to{transform:translateX(0);opacity:1}}
+            @keyframes lk-from-right{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
+            @keyframes lk-from-below{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+            @keyframes lk-scale{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+            @keyframes lk-wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+          `}</style>
+        )}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, minHeight: 400, background: colorVariants[selectedVariant].bg, transition: "background 0.2s" }}>
           {selectedLockup === null && (
             <Mark key={animKey} id="hero-mark" color={colorVariants[selectedVariant].fg} size={300} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
           )}
-          {selectedLockup === 0 && (
-            <div key={animKey} style={{ display: "flex", alignItems: "center", gap: 28 }}>
-              <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
-              <div style={{ width: 1, height: 70, background: `${colorVariants[selectedVariant].fg}40` }} />
-              <span style={{ fontWeight: 300, fontSize: 36, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>UPPERCASE</span>
-            </div>
-          )}
-          {selectedLockup === 1 && (
-            <div key={animKey} style={{ display: "flex", alignItems: "center", gap: 28 }}>
-              <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
-              <div style={{ width: 1, height: 70, background: `${colorVariants[selectedVariant].fg}40` }} />
-              <span style={{ fontSize: 36, color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
-                <span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span>
-                <span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span>
-              </span>
-            </div>
-          )}
-          {selectedLockup === 2 && (
-            <div key={animKey} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-              <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={140} params={effectiveParams} animationType={animationType} animDuration={animDuration} />
-              <span style={{ fontWeight: 300, fontSize: 20, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>UPPERCASE</span>
-            </div>
-          )}
+          {selectedLockup === 0 && (() => {
+            const d = animDuration, a = animationType;
+            const wrap = a === "fade" ? { animation: `lk-fade ${d}s ease-out both` }
+              : a === "scale" ? { animation: `lk-scale ${d}s cubic-bezier(.34,1.56,.64,1) both`, transformOrigin: "center" }
+              : a === "wipe" ? { animation: `lk-wipe ${d}s cubic-bezier(.65,0,.35,1) both` }
+              : {};
+            const isAsm = a === "assemble";
+            const s = d * 0.2;
+            return (
+              <div key={animKey} style={{ display: "flex", alignItems: "center", gap: 28, ...(!isAsm ? wrap : {}) }}>
+                <div style={isAsm ? { animation: `lk-from-left ${d}s cubic-bezier(.22,1,.36,1) both` } : {}}>
+                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} />
+                </div>
+                <div style={{ width: 1, height: 70, background: `${colorVariants[selectedVariant].fg}40`, ...(isAsm ? { animation: `lk-fade ${d * 0.5}s ease-out ${s}s both` } : {}) }} />
+                <span style={{ fontWeight: 300, fontSize: 36, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", ...(isAsm ? { animation: `lk-from-right ${d}s cubic-bezier(.22,1,.36,1) ${s * 2}s both` } : {}) }}>UPPERCASE</span>
+              </div>
+            );
+          })()}
+          {selectedLockup === 1 && (() => {
+            const d = animDuration, a = animationType;
+            const wrap = a === "fade" ? { animation: `lk-fade ${d}s ease-out both` }
+              : a === "scale" ? { animation: `lk-scale ${d}s cubic-bezier(.34,1.56,.64,1) both`, transformOrigin: "center" }
+              : a === "wipe" ? { animation: `lk-wipe ${d}s cubic-bezier(.65,0,.35,1) both` }
+              : {};
+            const isAsm = a === "assemble";
+            const s = d * 0.2;
+            return (
+              <div key={animKey} style={{ display: "flex", alignItems: "center", gap: 28, ...(!isAsm ? wrap : {}) }}>
+                <div style={isAsm ? { animation: `lk-from-left ${d}s cubic-bezier(.22,1,.36,1) both` } : {}}>
+                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={100} params={effectiveParams} />
+                </div>
+                <div style={{ width: 1, height: 70, background: `${colorVariants[selectedVariant].fg}40`, ...(isAsm ? { animation: `lk-fade ${d * 0.5}s ease-out ${s}s both` } : {}) }} />
+                <span style={{ fontSize: 36, color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", ...(isAsm ? { animation: `lk-from-right ${d}s cubic-bezier(.22,1,.36,1) ${s * 2}s both` } : {}) }}>
+                  <span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span>
+                  <span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span>
+                </span>
+              </div>
+            );
+          })()}
+          {selectedLockup === 2 && (() => {
+            const d = animDuration, a = animationType;
+            const wrap = a === "fade" ? { animation: `lk-fade ${d}s ease-out both` }
+              : a === "scale" ? { animation: `lk-scale ${d}s cubic-bezier(.34,1.56,.64,1) both`, transformOrigin: "center" }
+              : a === "wipe" ? { animation: `lk-wipe ${d}s cubic-bezier(.65,0,.35,1) both` }
+              : {};
+            const isAsm = a === "assemble";
+            const s = d * 0.25;
+            return (
+              <div key={animKey} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, ...(!isAsm ? wrap : {}) }}>
+                <div style={isAsm ? { animation: `lk-scale ${d}s cubic-bezier(.22,1,.36,1) both`, transformOrigin: "center" } : {}}>
+                  <Mark id="hero-mark" color={colorVariants[selectedVariant].fg} size={140} params={effectiveParams} />
+                </div>
+                <span style={{ fontWeight: 300, fontSize: 20, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", ...(isAsm ? { animation: `lk-from-below ${d}s cubic-bezier(.22,1,.36,1) ${s}s both` } : {}) }}>UPPERCASE</span>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Color strip */}

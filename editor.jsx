@@ -497,7 +497,7 @@ export default function LogoEditor() {
             { id: "hz-light", lockup: 0, col: false, content: <><Mark color={colorVariants[selectedVariant].fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${colorVariants[selectedVariant].fg}40` }} /><span style={{ fontWeight: 300, fontSize: 14, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg }}>UPPERCASE</span></> },
             { id: "hz-mixed", lockup: 1, col: false, content: <><Mark color={colorVariants[selectedVariant].fg} size={30} params={effectiveParams} /><div style={{ width: 1, height: 22, background: `${colorVariants[selectedVariant].fg}40` }} /><span style={{ fontSize: 14, color: colorVariants[selectedVariant].fg }}><span style={{ fontWeight: 700, letterSpacing: "0.1em" }}>UPPER</span><span style={{ fontWeight: 200, letterSpacing: "0.1em" }}>CASE</span></span></> },
             { id: "stacked", lockup: 2, col: true, content: <><Mark color={colorVariants[selectedVariant].fg} size={38} params={effectiveParams} /><span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: colorVariants[selectedVariant].fg }}>UPPERCASE</span></> },
-            { id: "mark-only", lockup: null, col: true, content: <><Mark color={colorVariants[selectedVariant].fg} size={38} params={effectiveParams} /><span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.35em", color: `${colorVariants[selectedVariant].fg}80` }}>MARK ONLY</span></> },
+            { id: "mark-only", lockup: null, col: true, content: <><Mark color={colorVariants[selectedVariant].fg} size={38} params={effectiveParams} /></> },
           ].map(({ id, lockup, content, col }) => (
             <button
               type="button"

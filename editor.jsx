@@ -9,8 +9,9 @@ const defaultParams = {
   letterHeight: 188,
   // U proportions
   uWidth: 98,
-  // C proportions  
+  // C proportions
   cWidth: 95,
+  ucSpacing: 0,
   cReturnLength: 25,
   cGap: 72, // vertical gap between C returns (opening size)
   // U corners
@@ -25,6 +26,7 @@ const defaultParams = {
   cGapBottomRadius: 5,
   symmetricC: true,
   linkOuterCorners: true,
+  splitSpine: false,
 };
 
 const Mark = ({ color = "#fff", size = 200, params, id }) => {
@@ -45,13 +47,15 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
     cBottomRightInner: cBRiRaw,
     cGapTopRadius: cGTRaw,
     cGapBottomRadius: cGBRaw,
+    ucSpacing = 0,
+    splitSpine = false,
   } = params;
 
   const scale = size / th;
 
   // Shared vertical positioning
   const padY = (th - lH) / 2;
-  
+
   // U positioning
   const uLeft = 0;
   const uTop = padY;
@@ -60,15 +64,19 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
   const uInnerLeft = uLeft + t;
   const uInnerBottom = uBottom - t;
 
-  // Spine: shared between U right and C left
+  // Spine
   const spineL = uRight - t;
   const spineR = uRight;
+  const spineMid = spineL + t / 2;
+
+  // In split mode: U owns the left half of the spine, C owns the right half
+  const spineWidth = splitSpine ? t / 2 : t;
+  const cArmLeft = (splitSpine ? spineMid : spineR) + ucSpacing;
 
   // C positioning
-  const cLeft = spineL;
   const cTop = padY;
   const cBottom = padY + lH;
-  const cRight = cLeft + cW;
+  const cRight = cArmLeft + cW;
   const cTopB = cTop + t;
   const cBotT = cBottom - t;
 
@@ -91,6 +99,9 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
 
   const innerR = Math.max(0, uBL - t);
 
+  // In split mode, U's right edge stops at the spine midpoint
+  const uRightEdge = splitSpine ? spineMid : spineR;
+
   // U path
   const uPath = [
     `M ${uLeft + uTL} ${uTop}`,
@@ -99,8 +110,8 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
     innerR > 0
       ? `Q ${uInnerLeft} ${uInnerBottom} ${uInnerLeft + innerR} ${uInnerBottom}`
       : `L ${uInnerLeft} ${uInnerBottom}`,
-    `L ${spineR} ${uInnerBottom}`,
-    `L ${spineR} ${uBottom}`,
+    `L ${uRightEdge} ${uInnerBottom}`,
+    `L ${uRightEdge} ${uBottom}`,
     `L ${uLeft + uBL} ${uBottom}`,
     uBL > 0
       ? `Q ${uLeft} ${uBottom} ${uLeft} ${uBottom - uBL}`
@@ -114,7 +125,7 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
 
   // C top arm
   const cTopPath = [
-    `M ${spineR} ${cTop}`,
+    `M ${cArmLeft} ${cTop}`,
     `L ${cRight - cTRo} ${cTop}`,
     cTRo > 0
       ? `Q ${cRight} ${cTop} ${cRight} ${cTop + cTRo}`
@@ -134,13 +145,13 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
     cTRi > 0
       ? `Q ${cRight - t} ${cTopB} ${cRight - t - cTRi} ${cTopB}`
       : `L ${cRight - t} ${cTopB}`,
-    `L ${spineR} ${cTopB}`,
+    `L ${cArmLeft} ${cTopB}`,
     "Z",
   ].join(" ");
 
   // C bottom arm
   const cBotPath = [
-    `M ${spineR} ${cBottom}`,
+    `M ${cArmLeft} ${cBottom}`,
     `L ${cRight - cBRo} ${cBottom}`,
     cBRo > 0
       ? `Q ${cRight} ${cBottom} ${cRight} ${cBottom - cBRo}`
@@ -160,7 +171,7 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
     cBRi > 0
       ? `Q ${cRight - t} ${cBotT} ${cRight - t - cBRi} ${cBotT}`
       : `L ${cRight - t} ${cBotT}`,
-    `L ${spineR} ${cBotT}`,
+    `L ${cArmLeft} ${cBotT}`,
     "Z",
   ].join(" ");
 
@@ -170,7 +181,8 @@ const Mark = ({ color = "#fff", size = 200, params, id }) => {
 
   return (
     <svg id={id} viewBox={`0 0 ${cRight} ${th}`} width={cRight * scale} height={th * scale} xmlns="http://www.w3.org/2000/svg">
-      <rect x={spineL} y={spineTop} width={t} height={spineBot - spineTop} fill={color} />
+      <rect x={spineL} y={spineTop} width={spineWidth} height={spineBot - spineTop} fill={color} />
+      {splitSpine && <rect x={cArmLeft} y={spineTop} width={t / 2} height={spineBot - spineTop} fill={color} />}
       <path d={uPath} fill={color} />
       <path d={cTopPath} fill={color} />
       <path d={cBotPath} fill={color} />
@@ -373,6 +385,16 @@ export default function LogoEditor() {
         <Section label="PROPORTIONS" subtle={subtle} muted={muted}>
           <Slider label="U Width" value={params.uWidth} onChange={(v) => update("uWidth", v)} min={50} max={180} color="#7BA3C9" />
           <Slider label="C Width" value={params.cWidth} onChange={(v) => update("cWidth", v)} min={60} max={200} color="#C9A37B" />
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={params.splitSpine}
+                onChange={(e) => setParams((p) => ({ ...p, splitSpine: e.target.checked }))}
+                style={{ accentColor: "#B8986A" }}
+              />
+              <span style={{ fontSize: 9, color: "#777", letterSpacing: "0.1em" }}>SPLIT SPINE</span>
+            </label>
+          </div>
+          <Slider label="U–C Spacing" value={params.ucSpacing} onChange={(v) => update("ucSpacing", v)} min={0} max={60} />
         </Section>
 
         <Section label="U — CORNERS" subtle={subtle} muted={muted} defaultOpen={false}>

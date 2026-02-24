@@ -508,6 +508,38 @@ export default function LogoEditor() {
                 const variant = colorVariants[selectedVariant];
                 const parser = new DOMParser();
                 const svgEl = parser.parseFromString(svgStr, "image/svg+xml").querySelector("svg");
+                const w = parseFloat(svgEl.getAttribute("width")) * 4;
+                const h = parseFloat(svgEl.getAttribute("height")) * 4;
+                const canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+                const cx = canvas.getContext("2d");
+                const url = URL.createObjectURL(new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" }));
+                const img = new Image();
+                img.onload = () => {
+                  cx.fillStyle = variant.bg;
+                  cx.fillRect(0, 0, w, h);
+                  cx.drawImage(img, 0, 0, w, h);
+                  URL.revokeObjectURL(url);
+                  canvas.toBlob((blob) => {
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = "uc-logo.png";
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                  }, "image/png");
+                };
+                img.src = url;
+              }}
+              style={{ background: "#333", border: "none", color: "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
+            >DOWNLOAD PNG</button>
+            <button
+              onClick={() => {
+                const svgStr = getExportSVG();
+                if (!svgStr) return;
+                const variant = colorVariants[selectedVariant];
+                const parser = new DOMParser();
+                const svgEl = parser.parseFromString(svgStr, "image/svg+xml").querySelector("svg");
                 const svgW = parseFloat(svgEl.getAttribute("width"));
                 const svgH = parseFloat(svgEl.getAttribute("height"));
                 const sigHeight = 48;

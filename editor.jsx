@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { GIFEncoder, quantize, applyPalette } from "gifenc";
 
 const defaultParams = {
   // Global
@@ -29,6 +30,133 @@ const defaultParams = {
   linkOuterCorners: true,
   splitSpine: false,
 };
+
+// Cubic-bezier evaluator matching CSS cubic-bezier()
+function cubicBezier(x1, y1, x2, y2) {
+  return (t) => {
+    // Newton-Raphson to find t for x, then compute y
+    let guessT = t;
+    for (let i = 0; i < 8; i++) {
+      const x = 3 * (1 - guessT) * (1 - guessT) * guessT * x1 + 3 * (1 - guessT) * guessT * guessT * x2 + guessT * guessT * guessT - t;
+      const dx = 3 * (1 - guessT) * (1 - guessT) * x1 + 6 * (1 - guessT) * guessT * (x2 - x1) + 3 * guessT * guessT * (1 - x2);
+      if (Math.abs(x) < 1e-6) break;
+      guessT -= x / dx;
+    }
+    const s = guessT;
+    return 3 * (1 - s) * (1 - s) * s * y1 + 3 * (1 - s) * s * s * y2 + s * s * s;
+  };
+}
+
+const easings = {
+  fade: cubicBezier(0, 0, 0.58, 1),
+  assemble: cubicBezier(0.22, 1, 0.36, 1),
+  scale: cubicBezier(0.34, 1.56, 0.64, 1),
+  wipe: cubicBezier(0.65, 0, 0.35, 1),
+};
+
+// Apply animation state at `progress` (0→1) to a parsed SVG document
+function applyAnimFrame(svg, type, progress, vw, vh, detailed, lockup) {
+  const els = [...svg.querySelectorAll("path"), ...svg.querySelectorAll("rect"), ...svg.querySelectorAll("text")];
+  if (type === "fade") {
+    els.forEach((el) => { el.setAttribute("opacity", progress); });
+  } else if (type === "scale") {
+    const cx = vw / 2, cy = vh / 2;
+    const s = progress; // easing already applied by caller
+    els.forEach((el) => {
+      const old = el.getAttribute("transform") || "";
+      el.setAttribute("transform", `translate(${cx},${cy}) scale(${s}) translate(${-cx},${-cy}) ${old}`);
+    });
+  } else if (type === "wipe") {
+    const clipId = "wipe-clip";
+    const defs = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "defs");
+    const cp = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+    cp.setAttribute("id", clipId);
+    const r = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "rect");
+    r.setAttribute("x", "0"); r.setAttribute("y", "0");
+    r.setAttribute("width", String(vw * progress));
+    r.setAttribute("height", String(vh));
+    cp.appendChild(r); defs.appendChild(cp); svg.insertBefore(defs, svg.firstChild);
+    // Wrap all content in a group with clip-path
+    const g = svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("clip-path", `url(#${clipId})`);
+    while (svg.childNodes.length > 1) g.appendChild(svg.childNodes[1]);
+    svg.appendChild(g);
+  } else if (type === "assemble") {
+    const sub = (delay) => Math.max(0, Math.min(1, (progress - delay) / (1 - delay)));
+    const markGroup = svg.querySelector('.mark-group');
+
+    if (detailed === false && markGroup) {
+      // Non-detailed "assemble" for lockups, matching the simpler web animation
+      const pMark = sub(0);
+      const oldTransformMark = markGroup.getAttribute("transform") || "";
+
+      if (lockup === 2) {
+        // Stacked: mark scales from center, text slides from below
+        const mcx = vw / 2, mcy = vh / 2;
+        markGroup.setAttribute("transform", `translate(${mcx},${mcy}) scale(${pMark}) translate(${-mcx},${-mcy}) ${oldTransformMark}`);
+        markGroup.setAttribute("opacity", pMark);
+
+        svg.querySelectorAll("text").forEach(el => {
+          if (el.closest('.mark-group')) return;
+          const old = el.getAttribute("transform") || "";
+          const pText = sub(0.25);
+          el.setAttribute("opacity", pText);
+          el.setAttribute("transform", `translate(0,${12 * (1 - pText)}) ${old}`);
+        });
+      } else {
+        // Horizontal lockups (0, 1): mark slides from left, text from right
+        markGroup.setAttribute("transform", `translate(${-30 * (1 - pMark)}, 0) ${oldTransformMark}`);
+        markGroup.setAttribute("opacity", pMark);
+
+        svg.querySelectorAll("text, rect").forEach(el => {
+          if (el.closest('.mark-group')) return;
+
+          const old = el.getAttribute("transform") || "";
+          if (el.tagName === "text") {
+            const pText = sub(0.4);
+            el.setAttribute("opacity", pText);
+            el.setAttribute("transform", `translate(${30 * (1 - pText)},0) ${old}`);
+          } else if (el.tagName === "rect" && parseFloat(el.getAttribute("width")) <= 1) {
+            const pDivider = sub(0.2);
+            el.setAttribute("opacity", pDivider);
+          }
+        });
+      }
+    } else {
+      // Detailed "assemble" for mark-only, or when detailed is toggled on for lockups
+      const stagger = 0.15;
+      els.forEach((el) => {
+        const tag = el.tagName;
+        const d = el.getAttribute("d") || "";
+        const old = el.getAttribute("transform") || "";
+        if (tag === "text") {
+          const p = sub(stagger * 3);
+          el.setAttribute("opacity", p);
+          el.setAttribute("transform", `translate(${40 * (1 - p)},0) ${old}`);
+        } else if (tag === "rect" && parseFloat(el.getAttribute("width")) <= 1) {
+          const p = sub(stagger * 2);
+          el.setAttribute("opacity", p);
+        } else if (tag === "rect") {
+          const y = parseFloat(el.getAttribute("y"));
+          const h = parseFloat(el.getAttribute("height"));
+          const cy = y + h / 2;
+          const p = sub(stagger);
+          el.setAttribute("opacity", p);
+          el.setAttribute("transform", `translate(0,${cy}) scale(1,${p}) translate(0,${-cy}) ${old}`);
+        } else if (d.includes("M 0") || d.startsWith("M 0")) {
+          const p = sub(0);
+          el.setAttribute("opacity", p);
+          el.setAttribute("transform", `translate(${-40 * (1 - p)},0) ${old}`);
+        } else {
+          const isBot = els.filter((e) => e.tagName === "path" && e !== el && !((e.getAttribute("d") || "").startsWith("M 0"))).indexOf(el) > 0;
+          const p = sub(stagger * (isBot ? 3 : 2));
+          el.setAttribute("opacity", p);
+          el.setAttribute("transform", `translate(${40 * (1 - p)},0) ${old}`);
+        }
+      });
+    }
+  }
+}
 
 function getAnimationCSS(type, duration, id) {
   const p = `#${id}`;
@@ -286,6 +414,7 @@ export default function LogoEditor() {
   const [animDuration, setAnimDuration] = useState(1.2);
   const [animKey, setAnimKey] = useState(0);
   const [detailedAssemble, setDetailedAssemble] = useState(true);
+  const [gifExporting, setGifExporting] = useState(false);
 
   const effectiveParams = autoReturnLength
     ? { ...params, cReturnLength: params.strokeWidth }
@@ -351,27 +480,31 @@ export default function LogoEditor() {
 
     if (lockup === 0) {
       // Horizontal: [mark] | UPPERCASE (light)
+      // Scale spacing proportionally: hero uses mark size 100, export uses 30
       const mh = 30, mw = mvw * (mh / mvh), s = mh / mvh;
-      const tw = measure("UPPERCASE", 14, 300, 0.35), ls = 14 * 0.35, pad = 14;
+      const tw = measure("UPPERCASE", 14, 300, 0.35), ls = 14 * 0.35, pad = lockupSpacing * (30 / 100);
       const W = mw + pad + 0.5 + pad + tw, H = 30;
-      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 2)}" height="${H * 2}" xmlns="http://www.w3.org/2000/svg"><g transform="scale(${s})">${inner}</g><rect x="${mw + pad}" y="${(H - 22) / 2}" width="0.5" height="22" fill="${color}" opacity="0.4"/><text x="${mw + pad + 0.5 + pad}" y="${H / 2}" dominant-baseline="central" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="14" font-weight="300" letter-spacing="${ls}" fill="${color}">UPPERCASE</text></svg>`;
+      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 2)}" height="${H * 2}" xmlns="http://www.w3.org/2000/svg"><g class="mark-group" transform="scale(${s})">${inner}</g><rect x="${mw + pad}" y="${(H - 22) / 2}" width="0.5" height="22" fill="${color}" opacity="0.25"/><text x="${mw + pad + 0.5 + pad}" y="${H / 2}" dominant-baseline="central" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="14" font-weight="300" letter-spacing="${ls}" fill="${color}">UPPERCASE</text></svg>`;
     }
 
     if (lockup === 1) {
       // Horizontal: [mark] | UPPER(bold)CASE(light)
+      // Scale spacing proportionally: hero uses mark size 100, export uses 30
       const mh = 30, mw = mvw * (mh / mvh), s = mh / mvh;
-      const ls = 14 * 0.1, pad = 14;
+      const ls = 14 * 0.1, pad = lockupSpacing * (30 / 100);
       const upperW = measure("UPPER", 14, 700, 0.1), caseW = measure("CASE", 14, 200, 0.1);
       const W = mw + pad + 0.5 + pad + upperW + caseW, H = 30;
-      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 2)}" height="${H * 2}" xmlns="http://www.w3.org/2000/svg"><g transform="scale(${s})">${inner}</g><rect x="${mw + pad}" y="${(H - 22) / 2}" width="0.5" height="22" fill="${color}" opacity="0.4"/><text x="${mw + pad + 0.5 + pad}" y="${H / 2}" dominant-baseline="central" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="14" letter-spacing="${ls}" fill="${color}"><tspan font-weight="700">UPPER</tspan><tspan font-weight="200">CASE</tspan></text></svg>`;
+      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 2)}" height="${H * 2}" xmlns="http://www.w3.org/2000/svg"><g class="mark-group" transform="scale(${s})">${inner}</g><rect x="${mw + pad}" y="${(H - 22) / 2}" width="0.5" height="22" fill="${color}" opacity="0.25"/><text x="${mw + pad + 0.5 + pad}" y="${H / 2}" dominant-baseline="central" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="14" letter-spacing="${ls}" fill="${color}"><tspan font-weight="700">UPPER</tspan><tspan font-weight="200">CASE</tspan></text></svg>`;
     }
 
     if (lockup === 2) {
       // Stacked: [mark] above UPPERCASE (small)
+      // Scale spacing proportionally: hero uses mark size 140 with gap lockupSpacing/2, export uses 38
       const mh = 38, mw = mvw * (mh / mvh), s = mh / mvh;
       const ls = 9 * 0.35, tw = measure("UPPERCASE", 9, 300, 0.35);
-      const W = Math.max(mw, tw), gap = 6, H = mh + gap + 9;
-      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 3)}" height="${Math.round(H * 3)}" xmlns="http://www.w3.org/2000/svg"><g transform="translate(${(W - mw) / 2},0) scale(${s})">${inner}</g><text x="${W / 2}" y="${H}" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" font-weight="300" letter-spacing="${ls}" fill="${color}">UPPERCASE</text></svg>`;
+      const gap = (lockupSpacing / 2) * (38 / 140);
+      const W = Math.max(mw, tw), H = mh + gap + 9;
+      return `<svg viewBox="0 0 ${W} ${H}" width="${Math.round(W * 3)}" height="${Math.round(H * 3)}" xmlns="http://www.w3.org/2000/svg"><g class="mark-group" transform="translate(${(W - mw) / 2},0) scale(${s})">${inner}</g><text x="${W / 2}" y="${H}" text-anchor="middle" font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="9" font-weight="300" letter-spacing="${ls}" fill="${color}">UPPERCASE</text></svg>`;
     }
 
     return new XMLSerializer().serializeToString(el);
@@ -399,6 +532,103 @@ export default function LogoEditor() {
     a.download = "uc-logo-animated.svg";
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const renderSvgToCanvas = (svgStr, canvas, bgColor) => {
+    return new Promise((resolve) => {
+      const ctx = canvas.getContext("2d");
+      const url = URL.createObjectURL(new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" }));
+      const img = new Image();
+      img.onload = () => {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      img.src = url;
+    });
+  };
+
+  const downloadGIF = async () => {
+    if (!animationType || gifExporting) return;
+    setGifExporting(true);
+    try {
+      const el = document.getElementById("hero-mark");
+      if (!el) return;
+      // Get a clean SVG (no animation CSS/classes) by temporarily rendering without animation
+      const baseSvg = getExportSVG(selectedLockup);
+      if (!baseSvg) return;
+      const parser = new DOMParser();
+      const serializer = new XMLSerializer();
+
+      // Determine output dimensions
+      const testDoc = parser.parseFromString(baseSvg, "image/svg+xml");
+      const testSvg = testDoc.querySelector("svg");
+      const vb = testSvg.getAttribute("viewBox").split(" ").map(Number);
+      const vw = vb[2], vh = vb[3];
+      const outH = 200;
+      const outW = Math.round(vw * (outH / vh));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = outW;
+      canvas.height = outH;
+
+      const bgColor = colorVariants[selectedVariant].bg;
+      const frameCount = Math.max(12, Math.round(animDuration * 20));
+      const frameDelay = Math.round((animDuration * 1000) / frameCount);
+      const easing = easings[animationType] || ((t) => t);
+
+      const gif = GIFEncoder();
+
+      for (let i = 0; i <= frameCount; i++) {
+        const t = i / frameCount;
+        const progress = easing(t);
+
+        // Parse a fresh copy of the SVG for this frame
+        const doc = parser.parseFromString(baseSvg, "image/svg+xml");
+        const svg = doc.querySelector("svg");
+
+        // Strip any existing animation style/classes from the SVG
+        const styleEl = svg.querySelector("style");
+        if (styleEl) styleEl.remove();
+        svg.querySelectorAll("[class]").forEach((el) => {
+          const cls = el.getAttribute("class");
+          if (cls === "mark-group") return; // preserve for applyAnimFrame
+          el.removeAttribute("class");
+        });
+
+        // Ensure correct viewBox-based dimensions for rendering
+        svg.setAttribute("width", String(outW));
+        svg.setAttribute("height", String(outH));
+
+        applyAnimFrame(svg, animationType, progress, vw, vh, detailedAssemble, selectedLockup);
+
+        const svgStr = serializer.serializeToString(svg);
+        await renderSvgToCanvas(svgStr, canvas, bgColor);
+
+        const ctx = canvas.getContext("2d");
+        const { data } = ctx.getImageData(0, 0, outW, outH);
+        const palette = quantize(data, 256);
+        const index = applyPalette(data, palette);
+
+        const isLast = i === frameCount;
+        gif.writeFrame(index, outW, outH, {
+          palette,
+          delay: isLast ? 2000 : frameDelay,
+        });
+      }
+
+      gif.finish();
+      const blob = new Blob([gif.bytes()], { type: "image/gif" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "uc-logo.gif";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } finally {
+      setGifExporting(false);
+    }
   };
 
   const downloadSVG = (lockup) => {
@@ -718,6 +948,14 @@ export default function LogoEditor() {
                 onClick={downloadAnimatedSVG}
                 style={{ background: "#B8986A", border: "none", color: "#000", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
               >ANIMATED SVG</button>
+            )}
+            {animationType && (
+              <button
+                type="button"
+                onClick={downloadGIF}
+                disabled={gifExporting}
+                style={{ background: "#333", border: "none", color: gifExporting ? "#666" : "#aaa", padding: "5px 12px", fontSize: 9, letterSpacing: "0.1em", borderRadius: 4, cursor: gifExporting ? "wait" : "pointer", fontFamily: "inherit" }}
+              >{gifExporting ? "EXPORTING..." : "DOWNLOAD GIF"}</button>
             )}
             <button
               onClick={() => {
